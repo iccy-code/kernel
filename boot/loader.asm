@@ -161,6 +161,14 @@ p_mode_start:
 	mov gs, ax
 
 
+	mov eax, KERNEL_START+SECTOR
+	mov ebx, KERNEL_BIN_BASE_ADDR
+
+	mov ecx, 200
+
+	call rd_disk_m_32
+
+
 ; --------------------------分页机制---------------
 
 	; 创建页目录及页表并初始化内存位图
@@ -186,6 +194,16 @@ p_mode_start:
 
 	lgdt [gdt_ptr]
 
+
+	jmp SELECTOR_CODE:enter_kernel
+
+enter_kernel:
+	call kernel_init
+	mov esp, 0xc009f000
+	jmp KERNEL_ENTRY_POINT
+
+
+
 	mov byte [gs:160], 'V'
 	mov byte [gs:162], 'i'
 	mov byte [gs:164], 'r'
@@ -193,6 +211,11 @@ p_mode_start:
 	mov byte [gs:168], 'u'
 	mov byte [gs:170], 'a'
 	mov byte [gs:172], 'l'
+
+	; 加载内核文件: 先将硬盘中的文件加载到内存中, 再去解析elf格式的内核文件后在内存中生成的内核映像, 这才是真正的内核文件
+	; 初始化内核: 在分页后, 将加载进来的elf文件内核文件安置到相应的虚拟内存中, 再跳过去执行
+	; 但是代码是在上面
+
 
 jmp $
 
@@ -245,6 +268,62 @@ setup_page:
 	add eax, 0x1000
 	loop .create_kernel_pde
 	
+	ret
+
+
+
+
+
+; 将kernel中的segment拷贝到编译的地址
+
+kernel_init:
+	xor eax, eax
+	xor ebx, ebx		; 记录程序头表地址
+	xor ecx, ecx		; 记录程序头表中的program header数量
+	xor edx, edx		; 记录program header大小, 即e_phentsize
+
+	mov dx, [KERNEL_BIN_BASE_ADDR + 42]
+	mov ebx, [KERNEL_BIN_BASE_ADDR + 28]
+
+	add ebx, KERNEL_BIN_BASE_ADDR
+	mov cx, [KERNEL_BIN_BASE_ADDR + 44]
+
+.each_segment:
+	cmp byte [ebx + 0], PT_NULL		; 若p_type等于PT_NULL, 说明program header未使用
+	je .PTNULL
+
+	push dword [ebx + 16]			; 为memcpy函数压入参数, 压入函数memcpy的第三个参数是size
+
+	mov eax, [ebx + 4]
+	add eax, KERNEL_BIN_BASE_ADDR
+
+	push eax						; 第二个参数
+	push dword [ebx + 8]			; 第三个参数
+
+	call mem_cpy
+	add esp, 12
+
+.PTNULL:
+	add ebx, edx
+
+	loop .each_segment
+	ret
+
+; 逐字节拷贝mem_cpy(dst, src, size)
+
+mem_cpy:
+	cld
+	push ebp
+	mov ebp, esp
+	push ecx				; rep指令用到ecx, 但ecx还是外面的循环的计数器, 所以压栈保存
+
+	mov edi, [ebp + 8]		; dst
+	mov esi, [ebp + 12]		; src
+	mov ecx, [ebp + 16]		; size
+	rep movsb
+
+	pop ecx			; 恢复环境
+	pop ebp
 	ret
 
 
