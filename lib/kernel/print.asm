@@ -1,5 +1,5 @@
 TI_GDT equ 0
-RPLO equ -
+RPLO equ 0
 SELECTOR_VIDEO equ (0x0003 << 3) + TI_GDT + RPLO
 
 [bits 32]

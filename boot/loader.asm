@@ -1,6 +1,5 @@
 %include "boot.inc"
 section loader vstart=LOADER_BASE_ADDR
-LOADER_STACK_TOP equ LOADER_BASE_ADDR	; 栈指针地址
 
 ; 构建GDT及其内部描述符
 GDT_BASE: 	dd 0x00000000		; 全局描述符表GDT, 也是第零个段描述符
@@ -161,7 +160,8 @@ p_mode_start:
 	mov gs, ax
 
 
-	mov eax, KERNEL_START+SECTOR
+
+	mov eax, KERNEL_START_SECTOR
 	mov ebx, KERNEL_BIN_BASE_ADDR
 
 	mov ecx, 200
@@ -197,27 +197,139 @@ p_mode_start:
 
 	jmp SELECTOR_CODE:enter_kernel
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 enter_kernel:
 	call kernel_init
 	mov esp, 0xc009f000
+
 	jmp KERNEL_ENTRY_POINT
 
+; 将kernel中的segment拷贝到编译的地址
+
+kernel_init:
+	xor eax, eax
+	xor ebx, ebx		; 记录程序头表地址
+	xor ecx, ecx		; 记录程序头表中的program header数量
+	xor edx, edx		; 记录program header大小, 即e_phentsize
+
+	mov dx, [KERNEL_BIN_BASE_ADDR + 42]
+	mov ebx, [KERNEL_BIN_BASE_ADDR + 28]
+
+	add ebx, KERNEL_BIN_BASE_ADDR
+	mov cx, [KERNEL_BIN_BASE_ADDR + 44]
+
+.each_segment:
+	cmp byte [ebx + 0], PT_NULL		; 若p_type等于PT_NULL, 说明program header未使用
+	je .PTNULL
+
+	push dword [ebx + 16]			; 为memcpy函数压入参数, 压入函数memcpy的第三个参数是size
+
+	mov eax, [ebx + 4]
+	add eax, KERNEL_BIN_BASE_ADDR
+
+	push eax						; 第二个参数
+	push dword [ebx + 8]			; 第三个参数
+
+	call mem_cpy
+	add esp, 12
+
+.PTNULL:
+	add ebx, edx
+
+	loop .each_segment
+	ret
+
+; 逐字节拷贝mem_cpy(dst, src, size)
+
+mem_cpy:
+	cld
+	push ebp
+	mov ebp, esp
+	push ecx				; rep指令用到ecx, 但ecx还是外面的循环的计数器, 所以压栈保存
 
 
-	mov byte [gs:160], 'V'
-	mov byte [gs:162], 'i'
-	mov byte [gs:164], 'r'
-	mov byte [gs:166], 't'
-	mov byte [gs:168], 'u'
-	mov byte [gs:170], 'a'
-	mov byte [gs:172], 'l'
+
+
+
+
+
+
+
+
+
+
+
+
+; 有问题 0xd9c
+
+
+
+
+
+	mov edi, [ebp + 8]		; dst
+	mov esi, [ebp + 12]		; src
+	mov ecx, [ebp + 16]		; size
+	rep movsb
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	pop ecx			; 恢复环境
+	pop ebp
+	ret
+
+
+
+
+;	mov byte [gs:160], 'V'
+;	mov byte [gs:162], 'i'
+;	mov byte [gs:164], 'r'
+;	mov byte [gs:166], 't'
+;	mov byte [gs:168], 'u'
+;	mov byte [gs:170], 'a'
+;	mov byte [gs:172], 'l'
 
 	; 加载内核文件: 先将硬盘中的文件加载到内存中, 再去解析elf格式的内核文件后在内存中生成的内核映像, 这才是真正的内核文件
 	; 初始化内核: 在分页后, 将加载进来的elf文件内核文件安置到相应的虚拟内存中, 再跳过去执行
 	; 但是代码是在上面
 
-
-jmp $
 
 setup_page:
 
@@ -273,57 +385,57 @@ setup_page:
 
 
 
+; 读取硬盘n个扇区, 32位版本
+rd_disk_m_32:
+	mov esi, eax
+	mov di, cx
 
-; 将kernel中的segment拷贝到编译的地址
+	mov dx, 0x1f2
+	mov al, cl
+	out dx, al
 
-kernel_init:
-	xor eax, eax
-	xor ebx, ebx		; 记录程序头表地址
-	xor ecx, ecx		; 记录程序头表中的program header数量
-	xor edx, edx		; 记录program header大小, 即e_phentsize
+	mov eax, esi
 
-	mov dx, [KERNEL_BIN_BASE_ADDR + 42]
-	mov ebx, [KERNEL_BIN_BASE_ADDR + 28]
+	mov dx, 0x1f3
+	out dx, al
 
-	add ebx, KERNEL_BIN_BASE_ADDR
-	mov cx, [KERNEL_BIN_BASE_ADDR + 44]
+	mov cl, 8
+	shr eax, cl
+	mov dx, 0x1f4
+	out dx, al
 
-.each_segment:
-	cmp byte [ebx + 0], PT_NULL		; 若p_type等于PT_NULL, 说明program header未使用
-	je .PTNULL
+	shr eax, cl
+	mov dx, 0x1f5
+	out dx, al
 
-	push dword [ebx + 16]			; 为memcpy函数压入参数, 压入函数memcpy的第三个参数是size
+	shr eax, cl
+	and al, 0x0f
+	or al, 0xe0
+	mov dx, 0x1f6
+	out dx, al
 
-	mov eax, [ebx + 4]
-	add eax, KERNEL_BIN_BASE_ADDR
+	mov dx, 0x1f7
+	mov al, 0x20
+	out dx, al
 
-	push eax						; 第二个参数
-	push dword [ebx + 8]			; 第三个参数
+.not_ready:
+	nop
+	in al, dx
+	and al, 0x88
+	cmp al, 0x08
+	jnz .not_ready
 
-	call mem_cpy
-	add esp, 12
+	mov ax, di
 
-.PTNULL:
-	add ebx, edx
+	mov dx, 256
+	mul dx
+	mov dx, ax
+	mov dx, 0x1f0
 
-	loop .each_segment
+.go_on_read:
+	in ax, dx
+	mov [ebx], ax
+	add ebx, 2
+
+	loop .go_on_read
 	ret
-
-; 逐字节拷贝mem_cpy(dst, src, size)
-
-mem_cpy:
-	cld
-	push ebp
-	mov ebp, esp
-	push ecx				; rep指令用到ecx, 但ecx还是外面的循环的计数器, 所以压栈保存
-
-	mov edi, [ebp + 8]		; dst
-	mov esi, [ebp + 12]		; src
-	mov ecx, [ebp + 16]		; size
-	rep movsb
-
-	pop ecx			; 恢复环境
-	pop ebp
-	ret
-
-
