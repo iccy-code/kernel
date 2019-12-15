@@ -429,7 +429,7 @@ rd_disk_m_32:
 
 	mov dx, 256
 	mul dx
-	mov dx, ax
+	mov cx, ax
 	mov dx, 0x1f0
 
 .go_on_read:

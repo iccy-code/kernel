@@ -3,7 +3,7 @@
 # boot
 nasm -I boot/ -o build/bootstrap.bin boot/bootstrap.asm
 # mv boot/bootstrap build/
-nasm -I boot/ -o build/loader.bin boot/loader.S
+nasm -I boot/ -o build/loader.bin boot/loader.asm
 # mv boot/loader build/
 nasm -f elf -o build/print.bin lib/kernel/print.asm
 
