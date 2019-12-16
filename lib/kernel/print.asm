@@ -2,8 +2,102 @@ TI_GDT equ 0
 RPLO equ 0
 SELECTOR_VIDEO equ (0x0003 << 3) + TI_GDT + RPLO
 
+section .data
+put_int_buffer dq 0		; 定义8字节缓冲区用于数字到字符的转换
+
 [bits 32]
 section .text
+
+;---------------------put_int----------------------
+; 将小端数字打印到屏幕上, 打印16进制的(不带0x)
+;---------------------------------------------------
+global put_int
+put_int:
+	pushad			; 备份所有寄存器
+	mov ebp, esp
+	mov eax, [ebp + 4 * 9]		; call的返回地址占4字节, pushad指令的8 * 4字节
+	mov edx, eax		
+	mov edi, 7		; 指定put_int_buffer中的偏移量
+	mov ecx, 8		; 32位数字中, 十六进制数字的位数是8个
+	mov ebx, put_int_buffer
+
+; 每4位是1位十六进制数字
+.16based_4bits:
+	and edx, 0x0000000f			; 保留最后4位数, and是与操作
+
+	cmp edx, 9					; 判断是0~9还是a~f
+	jg .is_A2F
+	add edx, '0'				; ASCII码是8位大小, add求和后, 只有低8位有效
+	jmp .store
+
+.is_A2F:
+	sub edx, 10					; 减去10再加上'A'的值, 就是对应的ASCII值
+	add edx, 'A'				; 例如: 0xf - 10 = 5 + 'A' == 'F'
+
+; 反序, 变成大端存储, 符合人的认知
+.store:
+	mov [ebx + edi], dl
+	dec edi
+	shr eax, 4					; 当最后4位处理完了, 右移4位
+	mov edx, eax
+	loop .16based_4bits
+
+; 此时put_int_buffer中全是字符, 把高位连续的字符去掉
+.ready_to_print:
+	inc edi						; 此时edi已经为-1(循环了8次, 7 - 8 == 01), 使其++
+.skip_prefix_0:
+	cmp edi, 8					; 若已经比较到第9个字符了, 打印字符全部为0
+
+	je .full0					; 有道理
+
+.go_on_skip:
+	mov cl, [put_int_buffer + edi]
+	inc edi
+	cmp cl, '0'
+	je .skip_prefix_0		; 判断下一位字符是否为字符0
+	dec edi
+	jmp .put_each_num
+
+.full0:
+	mov cl, '0'				; 输入的数字全为0时, 打印0
+
+.put_each_num:
+	push ecx				; cl为可打印的字符
+	call put_char
+	add esp, 4
+	inc edi
+	mov cl, [put_int_buffer + edi]
+	cmp edi, 8
+	jl .put_each_num
+	popad
+	ret
+
+;---------------------put_str----------------------
+; 通过调用put_char来打印以0结尾的字符串
+;---------------------------------------------------
+global put_str
+put_str:
+	push ebx		; 只用到ebx, ecx两个寄存器, 就只备份这两个
+	push ecx
+
+	xor ecx, ecx
+	mov ebx, [esp + 12]	; 从栈中拿到字符串
+
+.goon:
+	mov cl, [ebx]
+	cmp cl, 0			; 判断是否结束
+	jz .str_over
+	push ecx			; 为put_char传递参数
+	call put_char
+	add esp, 4			; 回收参数所占的栈空间
+	inc ebx				; 指向下一个字符
+	jmp .goon
+
+.str_over:
+	pop ecx
+	pop ebx
+	ret
+
 ;---------------------put_char----------------------
 ; 把栈中的一个字符写入光标所在处
 ;---------------------------------------------------
