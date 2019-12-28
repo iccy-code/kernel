@@ -28,9 +28,6 @@ extern intr_handler intr_entry_table[IDT_DESC_CNT]; 	// 声明引用定义在ker
 char* intr_name[IDT_DESC_CNT];			// 用于保存异常的名字
 intr_handler idt_table[IDT_DESC_CNT];	// 定义中断处理程序数组, 可kernel.asm中定义的intrXXentry, 只是中断处理程序的入口, 最终调用的是ide_table中的处理程序
 
-extern intr_handler intr_entry_table[IDT_DESC_CNT];		// 声明引用定义在kernel.asm中的中断处理函数入口数组
-
-
 /* 创建中断门描述符 */
 static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler function) {
 	p_gdesc->func_offset_low_word = (uint32_t)function & 0x0000FFFF;
@@ -47,19 +44,6 @@ static void idt_desc_init(void) {
 	put_str("idt_desc_init done\n");
 }
 
-
-/**
- * 完成有关中断的所有初始化工作
- */
-void idt_init() {
-	put_str("idt_init start\n");
-	idt_desc_init();	// 初始化中断描述符
-	pic_init();			// 初始化8259A
-
-	uint64_t idt_operand = ((sizeof(idt) - 1) | ((uint64_t)(uint32_t)idt << 16));
-	asm volatile ("lidt %0" : : "m" (idt_operand));
-	put_str("idt_init done\n");
-}
 
 
 /**
@@ -84,17 +68,17 @@ static void pic_init(void) {
 	outb(PIC_M_DATA, 0xfe);
 	outb(PIC_S_DATA, 0xff);
 
-	put_str("   pic_init done\n");
+	put_str("pic_init done\n");
 }
 
 static void general_intr_handler(uint8_t vec_nr) {
-	if(0x27 == vec_nr || 0x2f == vec_nr) {
+	if(vec_nr == 0x27 || vec_nr == 0x2f) {
 		return;
 	}
 
 	put_str("int vector : 0x");
 	put_int(vec_nr);
-	put_char("\n");
+	put_char('\n');
 }
 
 static void exception_init(void) {
@@ -123,4 +107,20 @@ static void exception_init(void) {
 	intr_name[17] = "#AC Alignment Check Exception";
 	intr_name[18] = "#MC Machine-Check Exception";
 	intr_name[19] = "#XF SIMD Floating-Point Exception";
+}
+
+
+
+/**
+ * 完成有关中断的所有初始化工作
+ */
+void idt_init() {
+	put_str("idt_init start\n");
+	idt_desc_init();	// 初始化中断描述符
+	exception_init();
+	pic_init();			// 初始化8259A
+
+	uint64_t idt_operand = ((sizeof(idt) - 1) | ((uint64_t)(uint32_t)idt << 16));
+	asm volatile ("lidt %0" : : "m" (idt_operand));
+	put_str("idt_init done\n");
 }
