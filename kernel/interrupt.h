@@ -5,7 +5,6 @@
 typedef void* intr_handler;
 
 void idt_init(void);
-static void pic_init(void);
 
 enum intr_status {
 	INTR_OFF,

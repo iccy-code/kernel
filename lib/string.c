@@ -7,10 +7,9 @@
  */
 void memset(void* dst_, uint8_t value, uint32_t size) {
 	ASSERT(dst_ != NULL);
-	uint8_t* dst = (uint8_t)dst_;
-	while(size-- > 0) {
+	uint8_t* dst = (uint8_t*)dst_;
+	while (size-- > 0)
 		*dst++ = value;
-	}
 }
 
 /**
@@ -62,3 +61,78 @@ uint32_t strlen(const char* str) {
 	return (p - str - 1);
 }
 
+/**
+ * 比较两个字符串, 若a_中的字符大于b_中的字符返回1, 相等时返回0, 否则返回-1
+ */
+int8_t strcmp(const char* a, const char* b) {
+	ASSERT(a != NULL && b != NULL);
+	while(*a != 0 && *a == *b) {
+		a++;
+		b++;
+	}
+	// 若歌*a小于*b就返回-1, 否则就属于*a大于等于*b的情况, 在下面的布尔表达式"*a > *b"中, 若*a大于*b, 表达式就等于1, 否则表达式不成立, 也就是布尔值为0, 恰恰表示*a等于*b
+	return *a < *b ? -1 : *a > *b;
+}
+
+/**
+ * 从左到右查找字符串str中首次出现字符ch的地址
+ */
+char* strchr(const char* str, const uint8_t ch) {
+	ASSERT(str != NULL);
+	while(*str != 0) {
+		if(*str == ch) {
+			return (char*)str;
+		}
+
+		str++;
+	}
+	return NULL;
+}
+
+/**
+ * 从后往前查找字符串str中首次出现字符ch的地址
+ */
+char* strrchr(const char* str, const uint8_t ch) {
+	ASSERT(str != NULL);
+	const char* last_char = NULL;
+	while(*str != 0) {
+		if(*str == ch) {
+			last_char = str;
+		}
+
+		str++;
+	}
+
+	return (char*)last_char;
+}
+
+/**
+ * 将字符串src_拼接到dst_后, 返回拼接的串地址
+ */
+char* strcat(char* dst_, const char* src_) {
+	ASSERT(dst_ != NULL && src_ != NULL);
+	char* str = dst_;
+	while(*str++);
+
+	--str;
+	while((*str++ = *src_++));
+
+	return dst_;
+}
+
+/**
+ * 在字符串str中查找字符ch出现的次数
+ */
+uint32_t strchrs(const char* str, uint8_t ch) {
+	ASSERT(str != NULL);
+	uint32_t ch_cnt = 0;
+	const char* p = str;
+	while(*p != 0) {
+		if(*p == ch) {
+			ch_cnt++;
+		}
+		p++;
+	}
+
+	return ch_cnt;
+}
