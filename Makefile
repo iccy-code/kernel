@@ -3,12 +3,13 @@ ENTRY_POINT = 0xc0001500
 AS = nasm
 CC = gcc
 LD = ld
-LIB = -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/
+LIB = -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/
 ASFLAGS = -f elf
 ASBINLIB = -I boot/include/
 CFLAGS = -m32 -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes -fno-stack-protector
 LDFLAGS = -melf_i386 -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
-OBJS = $(BUILD_DIR)/main.o $(BUILD_DIR)/init.o $(BUILD_DIR)/interrupt.o $(BUILD_DIR)/timer.o $(BUILD_DIR)/debug.o $(BUILD_DIR)/kernel.o  $(BUILD_DIR)/print.o $(BUILD_DIR)/bitmap.o $(BUILD_DIR)/memory.o $(BUILD_DIR)/string.o
+OBJS = $(BUILD_DIR)/main.o $(BUILD_DIR)/init.o $(BUILD_DIR)/thread.o $(BUILD_DIR)/memory.o $(BUILD_DIR)/string.o $(BUILD_DIR)/debug.o $(BUILD_DIR)/bitmap.o $(BUILD_DIR)/interrupt.o $(BUILD_DIR)/timer.o $(BUILD_DIR)/print.o $(BUILD_DIR)/kernel.o
+
 
 ############################### 引导代码编译 ##################################
 $(BUILD_DIR)/bootstrap.bin: boot/bootstrap.asm boot/include/boot.inc
@@ -41,6 +42,9 @@ $(BUILD_DIR)/memory.o: kernel/memory.c kernel/memory.h lib/stdint.h lib/kernel/b
 $(BUILD_DIR)/string.o: lib/string.c lib/string.h lib/stdint.h kernel/global.h kernel/debug.h
 	$(CC) $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/thread.o: thread/thread.c thread/thread.h lib/stdint.h kernel/global.h lib/kernel/bitmap.h kernel/memory.h lib/string.h lib/stdint.h lib/kernel/print.h kernel/interrupt.h kernel/debug.h
+	$(CC) $(CFLAGS) $< -o $@
+
 ############################### 汇编代码编译 ##################################
 $(BUILD_DIR)/kernel.o: kernel/kernel.asm
 	$(AS) $(ASFLAGS) $< -o $@
@@ -51,12 +55,15 @@ $(BUILD_DIR)/print.o: lib/kernel/print.asm
 $(BUILD_DIR)/kernel.bin: $(OBJS)
 	$(LD) $(LDFLAGS) $^ -o $@
 
-.PHONY: build clean all install
+.PHONY: build clean del all install
 
 build: $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/bootstrap.bin $(BUILD_DIR)/loader.bin
 
 clean:
 	cd $(BUILD_DIR) && pwd && rm -f ./*.o
+
+del:
+	cd $(BUILD_DIR) && pwd && rm -f ./*
 
 all: build
 	dd if=$(BUILD_DIR)/bootstrap.bin of=c.img count=1 bs=512 conv=notrunc

@@ -80,6 +80,8 @@ static void general_intr_handler(uint8_t vec_nr) {
 
 	put_str("int vector : 0x");
 	put_int(vec_nr);
+	put_str("    ");
+	put_str(intr_name[vec_nr]);
 	put_char('\n');
 }
 

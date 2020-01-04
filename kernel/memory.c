@@ -268,7 +268,7 @@ void* malloc_page(enum pool_flags pf, uint32_t pg_cnt) {
 void* get_kernel_pages(uint32_t pg_cnt) {
 	void* vaddr = malloc_page(PF_KERNEL, pg_cnt);
 	if(vaddr != NULL) {		// 若分配的地址不为空, 将页框清0后返回
-		memset(vaddr, 0, pg_cnt + PG_SIZE);
+		memset(vaddr, 0, pg_cnt * PG_SIZE);
 	}
 	return vaddr;
 }
