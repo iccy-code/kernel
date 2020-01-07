@@ -2,6 +2,7 @@
 #define __THREAD_THREAD_H
 
 #include "stdint.h"
+#include "list.h"
 
 /**
  * 先是自定义通用函数类型, 将在多线程函数中作为形参类型
@@ -81,10 +82,23 @@ struct task_struct {
 	enum task_status status;
 	uint8_t priority;			// 线程优先级
 	char name[16];
+
+	uint8_t ticks;				// 每次在cpu上执行的时间滴答数
+	uint8_t elapsed_ticks;		// 此任务在cpu上执行了多长时间
+	
+	struct list_elem general_tag;	// 是用于线程在一般的队列中的节点
+
+	struct list_elem all_list_tag;	// 是用于线程队列thread_all_list中的节点
+
+	uint32_t* pgdir;			// 进程自己页表的虚拟地址
 	uint32_t stack_magic;		// 栈的边界标记, 用于栈的溢出
 };
 
-void thread_create(struct task_struct* pthread, thread_func function, void* func_age);
+void thread_create(struct task_struct* pthread, thread_func function, void* func_arg);
 void init_thread(struct task_struct* pthread, char* name, int prio);
-struct task_struct* thread_start(char* name, int prio, thread_func function, void* func_age);
+struct task_struct* thread_start(char* name, int prio, thread_func function, void* func_arg);
+struct task_struct* running_thread(void);
+void schedule(void);
+void thread_init(void);
+
 #endif
