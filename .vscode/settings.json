@@ -1,5 +1,8 @@
 {
 	"files.associations": {
-		"sync.h": "c"
+		"sync.h": "c",
+		"ioqueue.h": "c",
+		"memory.h": "c",
+		"process.h": "c"
 	}
 }

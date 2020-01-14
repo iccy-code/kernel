@@ -6,15 +6,29 @@
 #include "interrupt.h"
 #include "print.h"
 #include "memory.h"
+#include "process.h"
+#include "sync.h"
 
 #define PG_SIZE 4096
 
 struct task_struct* main_thread;		// 主线程PCB
 struct list thread_ready_list;			// 就绪队列
 struct list thread_all_list;			// 所有任务队列
+struct lock pid_lock;					// 分配pid锁
 static struct list_elem* thread_tag;	// 用于保存队列中的线程节点
 
 extern void switch_to(struct task_struct* cur, struct task_struct* next);
+
+/**
+ * 分配pid
+ */
+static pid_t allocate_pid(void) {
+	static pid_t next_pid = 0;
+	lock_acquire(&pid_lock);
+	next_pid++;
+	lock_release(&pid_lock);
+	return next_pid;
+}
 
 /**
  * 获取当前线程pcb指针
@@ -55,6 +69,7 @@ void thread_create(struct task_struct* pthread, thread_func function, void* func
  */
 void init_thread(struct task_struct* pthread, char* name, int prio) {
 	memset(pthread, 0, sizeof(*pthread));
+	pthread->pid = allocate_pid();
 	strcpy(pthread->name, name);
 
 	if(pthread == main_thread) {
@@ -135,6 +150,10 @@ void schedule() {
 	thread_tag = list_pop(&thread_ready_list);
 	struct task_struct* next = elem2entry(struct task_struct, general_tag, thread_tag);
 	next->status = TASK_RUNNING;
+
+	// 激活任务页表
+	process_activate(next);
+
 	switch_to(cur, next);
 }
 
@@ -146,6 +165,7 @@ void thread_init(void) {
 	put_str("thread_init start\n");
 	list_init(&thread_ready_list);
 	list_init(&thread_all_list);
+	lock_init(&pid_lock);
 	// 将当前函数创建为线程
 	make_main_thread();
 	put_str("thread_init done\n");
@@ -185,4 +205,3 @@ void thread_unblock(struct task_struct* pthread) {
 	}
 	intr_set_status(old_status);
 }
-

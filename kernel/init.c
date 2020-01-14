@@ -6,6 +6,8 @@
 #include "thread.h"
 #include "console.h"
 #include "keyboard.h"
+#include "tss.h"
+#include "syscall-init.h"
 
 void init_all() {
 	put_str("init_all\n");
@@ -15,6 +17,8 @@ void init_all() {
 	timer_init();		// 初始化PIT
 	console_init();		// 初始化控制台
 	keyboard_init();	// 初始化键盘
+	tss_init();			// tss初始化
+	syscall_init();		// 初始化系统调用
 	
 	put_str("init_all done\n");
 }

@@ -4,7 +4,7 @@
 #include "print.h"
 #include "io.h"
 
-#define IDT_DESC_CNT 0x30		// 目前支持的中断数
+#define IDT_DESC_CNT 0x81		// 目前支持的中断数
 
 #define PIC_M_CTRL 0x20			// 主片的控制端口是0x20
 #define PIC_M_DATA 0x21			// 主片的数据端口是0x21
@@ -27,6 +27,7 @@ static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler 
 static struct gate_desc idt[IDT_DESC_CNT];		// idt是中断描述符, 本质就是中断门描述符数组
 
 extern intr_handler intr_entry_table[IDT_DESC_CNT]; 	// 声明引用定义在kernel.asm中的中断处理函数的入口数组
+extern uint32_t syscall_handler(void);
 
 char* intr_name[IDT_DESC_CNT];			// 用于保存异常的名字
 intr_handler idt_table[IDT_DESC_CNT];	// 定义中断处理程序数组, 可kernel.asm中定义的intrXXentry, 只是中断处理程序的入口, 最终调用的是ide_table中的处理程序
@@ -41,13 +42,15 @@ static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler 
 }
 
 static void idt_desc_init(void) {
-	for(int i = 0; i < IDT_DESC_CNT; i++) {
+	int i, lastindex = IDT_DESC_CNT - 1;
+	for(i = 0; i < IDT_DESC_CNT; i++) {
 		make_idt_desc(&idt[i], IDT_DESC_ATTR_DPL0, intr_entry_table[i]);
 	}
+
+	// 单独处理系统调用, 系统调用的中断门dpl为3, 中断处理程序为单独的syscall_handler函数
+	make_idt_desc(&idt[lastindex], IDT_DESC_ATTR_DPL3, syscall_handler);
 	put_str("idt_desc_init done\n");
 }
-
-
 
 /**
  * 初始化可编程中断控制器8259A

@@ -3,11 +3,13 @@
 
 #include "stdint.h"
 #include "list.h"
+#include "../kernel/memory.h"
 
 /**
  * 先是自定义通用函数类型, 将在多线程函数中作为形参类型
  */
 typedef void thread_func(void*);
+typedef int16_t pid_t;
 
 // 进程或线程的状态
 enum task_status {
@@ -79,6 +81,7 @@ struct thread_stack {
  */
 struct task_struct {
 	uint32_t* self_kstack;		// 各内核线程都用自己的内核栈
+	pid_t pid;
 	enum task_status status;
 	uint8_t priority;			// 线程优先级
 	char name[16];
@@ -91,8 +94,14 @@ struct task_struct {
 	struct list_elem all_list_tag;	// 是用于线程队列thread_all_list中的节点
 
 	uint32_t* pgdir;			// 进程自己页表的虚拟地址
+	struct virtual_addr userprog_vaddr;		// 用户进程的虚拟地址
+	struct mem_block_desc u_block_desc[DESC_CNT];		// 用户进程内存块描述符
+
 	uint32_t stack_magic;		// 栈的边界标记, 用于栈的溢出
 };
+
+extern struct list thread_ready_list;
+extern struct list thread_all_list;
 
 void thread_create(struct task_struct* pthread, thread_func function, void* func_arg);
 void init_thread(struct task_struct* pthread, char* name, int prio);
@@ -102,5 +111,4 @@ void schedule(void);
 void thread_init(void);
 void thread_block(enum task_status stat);
 void thread_unblock(struct task_struct* pthread);
-
 #endif
