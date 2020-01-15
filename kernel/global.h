@@ -122,4 +122,6 @@ struct gdt_desc {
 
 #define PG_SIZE 4096	// 页表尺寸
 
+#define UNUSED __attribute__ ((unused))
+
 #endif
