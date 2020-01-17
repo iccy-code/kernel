@@ -5,6 +5,8 @@
 #include "list.h"
 #include "../kernel/memory.h"
 
+#define MAX_FILES_OPEN_PER_PROC 8
+
 /**
  * 先是自定义通用函数类型, 将在多线程函数中作为形参类型
  */
@@ -96,7 +98,8 @@ struct task_struct {
 	uint32_t* pgdir;			// 进程自己页表的虚拟地址
 	struct virtual_addr userprog_vaddr;		// 用户进程的虚拟地址
 	struct mem_block_desc u_block_desc[DESC_CNT];		// 用户进程内存块描述符
-
+	int32_t fd_table[MAX_FILES_OPEN_PER_PROC];	// 已打开文件数组
+	uint32_t cwd_inode_nr;	 // 进程所在的工作目录的inode编号
 	uint32_t stack_magic;		// 栈的边界标记, 用于栈的溢出
 };
 
