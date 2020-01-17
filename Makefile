@@ -97,9 +97,9 @@ $(BUILD_DIR)/kernel.bin: $(OBJS)
 .PHONY: build clean del all install help
 
 build: $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/bootstrap.bin $(BUILD_DIR)/loader.bin
-
+	
 clean:
-	@cd $(BUILD_DIR) && rm -f ./*.o
+	@cd build && rm -f ./*.o
 	@echo "Finish compiling the file directory"
 
 del:
@@ -110,10 +110,13 @@ all: build
 	dd if=$(BUILD_DIR)/bootstrap.bin of=c.img count=1 bs=512 conv=notrunc
 	dd if=$(BUILD_DIR)/loader.bin of=c.img count=4 bs=512 conv=notrunc seek=2
 	dd if=$(BUILD_DIR)/kernel.bin of=c.img count=200 bs=512 conv=notrunc seek=9
-
-install: all clean
+	make clean
+	@if [ ! "c.img.lock" ]; then	rm -r c.img.lock; fi
+	@if [ ! "d.img.lock" ]; then	rm -r d.img.lock; fi
 	@bochs -q -f  /usr/local/share/bochs/.bochsrc
-	@if [ ! "c.img.lock" ]; then	rm -r c.img.lock fi
 
 help:
-	@echo "build	: Compile all files into the build directory\nclean	: Delete compiled files (keep necessary files)\ndel	: Empty build directory\nall	: Writes compiled files to a floppy disk\ninstall : bochs start writing to the floppy disk after executing the file"
+	@echo "build	: Compile all files into the build directory"
+	@echo "clean	: Delete compiled files (keep necessary files)"
+	@echo "del		: Empty build directory"
+	@echo "all		: Writes compiled files to a floppy disk"
