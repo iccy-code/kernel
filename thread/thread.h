@@ -3,8 +3,10 @@
 
 #include "stdint.h"
 #include "list.h"
-#include "../kernel/memory.h"
+#include "bitmap.h"
+#include "memory.h"
 
+#define TASK_NAME_LEN 16
 #define MAX_FILES_OPEN_PER_PROC 8
 
 /**
@@ -99,7 +101,9 @@ struct task_struct {
 	struct virtual_addr userprog_vaddr;		// 用户进程的虚拟地址
 	struct mem_block_desc u_block_desc[DESC_CNT];		// 用户进程内存块描述符
 	int32_t fd_table[MAX_FILES_OPEN_PER_PROC];	// 已打开文件数组
-	uint32_t cwd_inode_nr;	 // 进程所在的工作目录的inode编号
+	uint32_t cwd_inode_nr;		// 进程所在的工作目录的inode编号
+	pid_t parent_pid;			// 父进程pid
+	int8_t  exit_status;		// 进程结束时自己调用exit传入的参数
 	uint32_t stack_magic;		// 栈的边界标记, 用于栈的溢出
 };
 
@@ -115,5 +119,10 @@ void thread_init(void);
 void thread_block(enum task_status stat);
 void thread_unblock(struct task_struct* pthread);
 void thread_yield(void);
+pid_t fork_pid(void);
+void sys_ps(void);
+void thread_exit(struct task_struct* thread_over, bool need_schedule);
+struct task_struct* pid2thread(int32_t pid);
+void release_pid(pid_t pid);
 
 #endif

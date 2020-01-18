@@ -3,6 +3,12 @@
 		"sync.h": "c",
 		"ioqueue.h": "c",
 		"memory.h": "c",
-		"process.h": "c"
+		"process.h": "c",
+		"*.tcc": "c",
+		"unordered_map": "c",
+		"fstream": "c",
+		"istream": "c",
+		"ostream": "c",
+		"sstream": "c"
 	}
 }

@@ -102,7 +102,7 @@ static void general_intr_handler(uint8_t vec_nr) {
 		int page_fault_vaddr = 0;
 		asm("movl %%cr2, %0" : "=r" (page_fault_vaddr));	// cr2是存放page_fault的地址
 
-		put_str("\npage fault addr is ");put_int(page_fault_vaddr);
+		put_str("\npage fault addr is 0x");put_int(page_fault_vaddr);
 	}
 
 	put_str("!!!!!!    excetion message begin  !!!!!!\n");

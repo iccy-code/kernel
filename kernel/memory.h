@@ -40,7 +40,7 @@ struct mem_block_desc {
 	struct list free_list;			// 目前可用的mem_block链表
 };
 
-#define DESC_CNT 7	   // 内存块描述符个数
+#define DESC_CNT 7		// 内存块描述符个数
 
 extern struct pool kernel_pool, user_pool;
 void mem_init(void);
@@ -57,5 +57,7 @@ void* sys_malloc(uint32_t size);
 void mfree_page(enum pool_flags pf, void* _vaddr, uint32_t pg_cnt);
 void pfree(uint32_t pg_phy_addr);
 void sys_free(void* ptr);
+void* get_a_page_without_opvaddrbitmap(enum pool_flags pf, uint32_t vaddr);
+void free_a_phy_page(uint32_t pg_phy_addr);
 
 #endif
